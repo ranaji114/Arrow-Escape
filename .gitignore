@@ -112,7 +112,6 @@ test/verify_all_levels_test.dart
 test/verify_bin_solvability_test.dart
 
 # Sensitive Local Secrets
-lib/core/ad_secrets.dart
 google-services.json
 **/google-services.json
 GoogleService-Info.plist

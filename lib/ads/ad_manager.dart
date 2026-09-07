@@ -129,9 +129,9 @@ class AdManager {
 
   // ── Interstitial Logic (Waterfall) ───────────────────────────────────────────
   Future<void> onLevelComplete(int levelNumber, bool isSpecialLevel) async {
-    if (isSpecialLevel) return; // No ads on boss/god levels
     _levelsSinceLastInterstitial++;
     if (_levelsSinceLastInterstitial >= AppConstants.interstitialEveryNLevels) {
+      if (isSpecialLevel) return; // Wait until regular level to show
       await showInterstitial();
     }
   }
@@ -139,30 +139,53 @@ class AdManager {
   Future<void> showInterstitial() async {
     final completer = Completer<void>();
 
-    // 1. Try AdMob (Priority 1) if enabled
+    // 1. Try Pre-loaded AdMob (Priority 1) if enabled
     if (AppConstants.enableAdMob && _isAdmobInterstitialLoaded && _admobInterstitial != null) {
       _levelsSinceLastInterstitial = 0;
-      _admobInterstitial!.fullScreenContentCallback = FullScreenContentCallback(
+      final ad = _admobInterstitial!;
+      _admobInterstitial = null;
+      _isAdmobInterstitialLoaded = false;
+
+      ad.fullScreenContentCallback = FullScreenContentCallback(
         onAdDismissedFullScreenContent: (ad) {
           ad.dispose();
-          _isAdmobInterstitialLoaded = false;
           _loadAdmobInterstitial(); // Pre-load next
           if (!completer.isCompleted) completer.complete();
         },
         onAdFailedToShowFullScreenContent: (ad, error) {
           ad.dispose();
-          _isAdmobInterstitialLoaded = false;
           _loadAdmobInterstitial();
-          // Fallback to Unity Ads (Priority 2)
           _showUnityInterstitial(completer);
         },
       );
-      await _admobInterstitial!.show();
-    } else {
-      // Fallback to Unity Ads (Priority 2)
-      _showUnityInterstitial(completer);
+      await ad.show();
+      return completer.future;
     }
 
+    // 2. Fast On-Demand AdMob load fallback (up to 3 seconds)
+    if (AppConstants.enableAdMob) {
+      final onDemandInter = await _loadAdmobInterstitialOnDemand(const Duration(seconds: 3));
+      if (onDemandInter != null) {
+        _levelsSinceLastInterstitial = 0;
+        onDemandInter.fullScreenContentCallback = FullScreenContentCallback(
+          onAdDismissedFullScreenContent: (ad) {
+            ad.dispose();
+            _loadAdmobInterstitial();
+            if (!completer.isCompleted) completer.complete();
+          },
+          onAdFailedToShowFullScreenContent: (ad, error) {
+            ad.dispose();
+            _loadAdmobInterstitial();
+            _showUnityInterstitial(completer);
+          },
+        );
+        await onDemandInter.show();
+        return completer.future;
+      }
+    }
+
+    // 3. Fallback to Unity Ads (Priority 2)
+    _showUnityInterstitial(completer);
     return completer.future;
   }
 

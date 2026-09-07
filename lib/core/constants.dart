@@ -46,7 +46,7 @@ class AppConstants {
   static const bool enableUnityAds = false;
   static const bool enableAppLovin = false;
 
-  static const int interstitialEveryNLevels = 4;
+  static const int interstitialEveryNLevels = 3;
 
   // Animation durations
   static const Duration arrowSlideDuration = Duration(milliseconds: 220);

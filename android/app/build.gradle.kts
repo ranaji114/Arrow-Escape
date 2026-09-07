@@ -4,8 +4,6 @@ plugins {
     id("com.android.application")
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
-    id("com.google.gms.google-services")
-    id("com.google.firebase.crashlytics")
 }
 
 // Load keystore properties
@@ -23,7 +21,7 @@ if (localPropertiesFile.exists()) {
 
 val admobAppId = keystoreProperties.getProperty("admobAppId")
     ?: localProperties.getProperty("admobAppId")
-    ?: "ca-app-pub-3044335875753764~1764036598"
+    ?: "ca-app-pub-6254721184503960~3194188248"
 
 android {
     namespace = "com.arrowx.escape"
@@ -85,4 +83,9 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-ktx:1.9.3")
     implementation("androidx.multidex:multidex:2.0.1")
+}
+
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
 }

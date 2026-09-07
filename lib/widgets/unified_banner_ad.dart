@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:unity_ads_plugin/unity_ads_plugin.dart';
@@ -21,6 +22,7 @@ class _UnifiedBannerAdState extends State<UnifiedBannerAd> {
   BannerAd? _admobBanner;
   bool _admobLoaded = false;
   bool _admobFailed = false;
+  Timer? _retryTimer;
 
   @override
   void initState() {
@@ -33,12 +35,17 @@ class _UnifiedBannerAdState extends State<UnifiedBannerAd> {
   }
 
   void _loadAdmobBanner() {
+    _retryTimer?.cancel();
+    _admobBanner?.dispose();
+    _admobBanner = null;
+
     _admobBanner = BannerAd(
       adUnitId: widget.admobUnitId,
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
+          debugPrint('AdMob Banner loaded successfully!');
           if (mounted) {
             setState(() {
               _admobLoaded = true;
@@ -47,11 +54,16 @@ class _UnifiedBannerAdState extends State<UnifiedBannerAd> {
           }
         },
         onAdFailedToLoad: (ad, error) {
+          debugPrint('AdMob Banner failed to load: $error. Retrying in 10s...');
           ad.dispose();
           if (mounted) {
             setState(() {
               _admobLoaded = false;
               _admobFailed = true;
+            });
+            // Auto-retry every 10 seconds so banner doesn't stay blank
+            _retryTimer = Timer(const Duration(seconds: 10), () {
+              if (mounted) _loadAdmobBanner();
             });
           }
         },
@@ -61,6 +73,7 @@ class _UnifiedBannerAdState extends State<UnifiedBannerAd> {
 
   @override
   void dispose() {
+    _retryTimer?.cancel();
     _admobBanner?.dispose();
     super.dispose();
   }
